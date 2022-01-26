@@ -23,12 +23,17 @@ mp_drawing = mp.solutions.drawing_utils
 mp_hands = mp.solutions.hands
 
 color_set = (0, 255, 0)
-
+left_hand_score = 0
+right_hand_score = 0
 
 # get labels for hands
 
 def get_label(index, hand, results):
     output = None
+    
+    
+    
+    
 
     if index == 0:
         label = results.multi_handedness[0].classification[0].label
@@ -37,6 +42,11 @@ def get_label(index, hand, results):
         coords = tuple(np.multiply(
                         np.array((hand.landmark[mp_hands.HandLandmark.WRIST].x, hand.landmark[mp_hands.HandLandmark.WRIST].y)),
                         [cam_width,cam_height]).astype(int))
+        
+        if label == "Left":
+            left_hand_score = score
+        else:
+            right_hand_score = score
 
         output = text, coords
         return output
@@ -49,8 +59,16 @@ def get_label(index, hand, results):
                         np.array((hand.landmark[mp_hands.HandLandmark.WRIST].x, hand.landmark[mp_hands.HandLandmark.WRIST].y)),
                         [cam_width,cam_height]).astype(int))
 
+        if label == "Left":
+            left_hand_score = score
+        else:
+            right_hand_score = score
+
         output = text, coords
         return output
+    
+    
+    
         
 # draw finger position
 def draw_finger_position(image, results, joint_list):
@@ -107,13 +125,19 @@ def draw_finger_position(image, results, joint_list):
 
             if joint == [4,3,2]:
                 thumb_pos = tuple(np.multiply(a, [cam_width, cam_height]).astype(int))
+                
             if joint == [8,7,6]:
                 index_pos = tuple(np.multiply(a, [cam_width, cam_height]).astype(int))
+                
             if joint == [20,19,18]:
                 pinky_pos = tuple(np.multiply(a, [cam_width, cam_height]).astype(int))
+                
 
             cv2.putText(image, txt_a, tuple(np.multiply(a, [cam_width, cam_height]).astype(int)),
                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA)
+                    
+        
+         
 
         
         if i == 0:
@@ -121,11 +145,17 @@ def draw_finger_position(image, results, joint_list):
             index_pos_0 = index_pos
             pinky_pos_0 = pinky_pos
             #print(thumb_pos_0)
+            cv2.putText(image, "position thumb: " + str(thumb_pos), (50, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+            cv2.putText(image, "position index: " + str(index_pos), (50, 170), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+            cv2.putText(image, "position pinkie: "+ str(pinky_pos), (50, 190), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
 
         if i == 1:
             thumb_pos_1 = thumb_pos
             index_pos_1 = index_pos
             pinky_pos_1 = pinky_pos
+            cv2.putText(image,  str(thumb_pos), (290, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+            cv2.putText(image, str(index_pos), (290, 170), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+            cv2.putText(image,  str(pinky_pos), (290, 190), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
 
         cv2.line(image, (thumb_pos), (index_pos), color_set, thickness = 2)
         cv2.line(image, (index_pos), (pinky_pos), color_set, thickness = 2)
@@ -222,20 +252,38 @@ with mp_hands.Hands(max_num_hands = 2, min_detection_confidence=0.8, min_trackin
                                         )
                 
                 
-
+                
                 # Render left or right detection
                 if get_label(num, hand, results):
                     
+                    
                     text, coord = get_label(num, hand, results)
                     cv2.putText(image, text, coord, cv2.FONT_HERSHEY_SIMPLEX, 1, color_set, 2, cv2.LINE_AA)
+                    if text[0] == "L":
+                        cv2.putText(image, text, (50, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+                    if text[0] == "R":
+                        cv2.putText(image, text, (50, 130), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+                    
                     
             
+
             # Draw angles to image from joint list
             #draw_finger_angles(image, results, joint_list)
 
             # Draw position to image from joint list
             draw_finger_position(image, results, joint_list)
-            
+
+
+        # default text
+        cv2.putText(image, "Left " , (50, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+        cv2.putText(image, "Right " , (50, 130), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+        cv2.putText(image, "distance thumb: ", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+        cv2.putText(image, "distance index: ", (50, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+        cv2.putText(image, "distance pinkie: ", (50, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+        cv2.putText(image, "position thumb: ", (50, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+        cv2.putText(image, "position index: ", (50, 170), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+        cv2.putText(image, "position pinkie: ", (50, 190), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )  
+
         # Save our image    
         #cv2.imwrite(os.path.join('Output Images', '{}.jpg'.format(uuid.uuid1())), image)
         cv2.imshow('Hand Tracking', image)
