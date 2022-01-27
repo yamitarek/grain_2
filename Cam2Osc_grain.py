@@ -1,7 +1,6 @@
 
 # IMPORTS
 from turtle import color
-#from types import NoneType
 import mediapipe as mp
 import cv2
 import numpy as np
@@ -68,10 +67,13 @@ def get_label(index, hand, results):
         output = text, coords
         return output
     
+
+#making variables globally accessable
 def bufferfunc():
     bufferfunc.dist_finger = np.array([0,0,0])
     bufferfunc.dist_finger2 = np.array([0,0,0])
     bufferfunc.dist_hands = np.array([0,0,0])
+    bufferfunc.count_hands = 0
 
         
 # draw finger position
@@ -79,7 +81,7 @@ def draw_finger_position(image, results, joint_list):
     
     #BUFFER Variable
     buff = np.array([0,0])
-    
+    bufferfunc.count_hands = 0
      
     
     thumb_pos_0 = None
@@ -90,15 +92,18 @@ def draw_finger_position(image, results, joint_list):
     pinky_pos_1 = None
 
     i = 0
-    # Loop through hands
+    # Loop through hands and send OSC
     for hand in results.multi_hand_landmarks:
         #Loop through joint sets 
         
+        if i == 0:
+            hand_label = results.multi_handedness[0].classification[0].label
+        if i == 1:
+            hand_label = results.multi_handedness[1].classification[0].label
         
         thumb_pos = None
         index_pos = None
         pinky_pos = None
-
 
         for joint in joint_list:
             a = np.array([hand.landmark[joint[0]].x, hand.landmark[joint[0]].y]) # First coord
@@ -114,8 +119,11 @@ def draw_finger_position(image, results, joint_list):
             cv2.circle(image, center = tuple(np.multiply(a, [cam_width, cam_height]).astype(int)), 
                         radius = int(a_depth * 2), color = color_set, thickness = 1*int(a_depth/3))
             
-            
-            hand_ind = results.multi_hand_landmarks.index(hand)
+            if hand_label == "Left":
+                hand_ind = "0"
+            if hand_label == "Right":
+                hand_ind = "1"
+
             joint_ind = joint_list.index(joint)
 
             string_path = '/'+'h'+str(hand_ind)+'/'+'f'+str(joint_ind)+'/x'
@@ -141,8 +149,10 @@ def draw_finger_position(image, results, joint_list):
 
             cv2.putText(image, txt_a, tuple(np.multiply(a, [cam_width, cam_height]).astype(int)),
                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA)
-                    
-        if i == 0:
+            
+        # LEFT HAND, PUT TRIANGLE AND SEND VIA OSC            
+        if hand_label == "Left":
+            
             thumb_pos_0 = thumb_pos
             index_pos_0 = index_pos
             pinky_pos_0 = pinky_pos
@@ -172,11 +182,14 @@ def draw_finger_position(image, results, joint_list):
 
                 string_path = '/'+str("h0")+'/'+'dist_pt'
                 ruta = string_path.encode()
-                OSC_CLIENT.send_message(ruta, [float(dist_index_pinkie)])
+                OSC_CLIENT.send_message(ruta, [float(dist_pinkie_thumb)])
 
             bufferfunc.dist_finger = dist_array
 
-        if i == 1:
+            bufferfunc.count_hands = bufferfunc.count_hands +1
+
+        # RIGHT HAND, PUT TRIANGLE AND SEND VIA OSC
+        if hand_label == "Right":
             
             thumb_pos_1 = thumb_pos
             index_pos_1 = index_pos
@@ -186,31 +199,32 @@ def draw_finger_position(image, results, joint_list):
             cv2.putText(image, str(index_pos), (290, 170), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
             cv2.putText(image,  str(pinky_pos), (290, 190), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
 
-            dist_thumb_index = np.linalg.norm(np.array((thumb_pos_0[0], thumb_pos_0[1]))-np.array((index_pos_0[0], index_pos_0[1])))
-            dist_index_pinkie = np.linalg.norm(np.array((index_pos_0[0], index_pos_0[1]))-np.array((pinky_pos_0[0], pinky_pos_0[1])))
-            dist_pinkie_thumb = np.linalg.norm(np.array((pinky_pos_0[0], pinky_pos_0[1]))-np.array((thumb_pos_0[0], thumb_pos_0[1])))
+            dist_thumb_index1 = np.linalg.norm(np.array((thumb_pos_1[0], thumb_pos_1[1]))-np.array((index_pos_1[0], index_pos_1[1])))
+            dist_index_pinkie1 = np.linalg.norm(np.array((index_pos_1[0], index_pos_1[1]))-np.array((pinky_pos_1[0], pinky_pos_1[1])))
+            dist_pinkie_thumb1 = np.linalg.norm(np.array((pinky_pos_1[0], pinky_pos_1[1]))-np.array((thumb_pos_1[0], thumb_pos_1[1])))
 
-            cv2.putText(image, str(round(dist_thumb_index, 2)), (290, 210), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
-            cv2.putText(image, str(round(dist_index_pinkie, 2)), (290, 230), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
-            cv2.putText(image, str(round(dist_pinkie_thumb, 2)), (290, 250), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+            cv2.putText(image, str(round(dist_thumb_index1, 2)), (290, 210), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+            cv2.putText(image, str(round(dist_index_pinkie1, 2)), (290, 230), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+            cv2.putText(image, str(round(dist_pinkie_thumb1, 2)), (290, 250), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
 
-            dist_array2 = np.array([dist_thumb_index,dist_index_pinkie,dist_pinkie_thumb])     
+            dist_array2 = np.array([dist_thumb_index1,dist_index_pinkie1,dist_pinkie_thumb1])     
 
-            if not ((np.array_equal(bufferfunc.dist_finger2, dist_array))):
+            if not ((np.array_equal(bufferfunc.dist_finger2, dist_array2))):
                 string_path = '/'+str("h1")+'/'+'dist_ti'
-                print(ruta)
                 ruta = string_path.encode()
-                OSC_CLIENT.send_message(ruta, [float(dist_thumb_index)])
+                OSC_CLIENT.send_message(ruta, [float(dist_thumb_index1)])
 
                 string_path = '/'+str("h1")+'/'+'dist_ip'
                 ruta = string_path.encode()
-                OSC_CLIENT.send_message(ruta, [float(dist_index_pinkie)])
+                OSC_CLIENT.send_message(ruta, [float(dist_index_pinkie1)])
 
                 string_path = '/'+str("h1")+'/'+'dist_pt'
                 ruta = string_path.encode()
-                OSC_CLIENT.send_message(ruta, [float(dist_index_pinkie)])
+                OSC_CLIENT.send_message(ruta, [float(dist_pinkie_thumb1)])
 
             bufferfunc.dist_finger2 = dist_array2
+
+            bufferfunc.count_hands = bufferfunc.count_hands +1
 
         cv2.line(image, (thumb_pos), (index_pos), color_set, thickness = 2)
         cv2.line(image, (index_pos), (pinky_pos), color_set, thickness = 2)
@@ -218,8 +232,11 @@ def draw_finger_position(image, results, joint_list):
 
         i = i+1
 
-    if (i == 2):
-        #print("both")
+    # Check for both using isinstance, to work around the "thumb_pos_0[i] -> NoneType not subscriptable" error that appears, when BOTH_HANDS happens before one of the hands 
+    if (isinstance(thumb_pos_0, (str, list, tuple)))&(isinstance(thumb_pos_1, (str, list, tuple))):
+        print("both", )
+       
+
         cv2.line(image, thumb_pos_0, thumb_pos_1, color_set, thickness = 2)
         cv2.line(image, index_pos_0, index_pos_1, color_set, thickness = 2)
         cv2.line(image, pinky_pos_0, pinky_pos_1, color_set, thickness = 2)
