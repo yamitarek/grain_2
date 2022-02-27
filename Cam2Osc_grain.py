@@ -1,6 +1,6 @@
 
 # IMPORTS
-from turtle import color
+#from turtle import color
 import mediapipe as mp
 import cv2
 import numpy as np
@@ -16,12 +16,14 @@ from oscpy.client import OSCClient
 OSC_HOST ="127.0.0.1" #127.0.0.1 is for same computer
 OSC_PORT = 8000
 OSC_CLIENT = OSCClient(OSC_HOST, OSC_PORT)
+OSC_PORT_WEK = 6448
+OSC_CLIENT_WEK = OSCClient(OSC_HOST, OSC_PORT_WEK)
 
 # media pipe objects
 mp_drawing = mp.solutions.drawing_utils
 mp_hands = mp.solutions.hands
 
-color_set = (245, 166, 233)
+color_set = (20, 255, 20)
 left_hand_score = 0
 right_hand_score = 0
 
@@ -74,7 +76,10 @@ def bufferfunc():
     bufferfunc.dist_finger2 = np.array([0,0,0])
     bufferfunc.dist_hands = np.array([0,0,0])
     bufferfunc.count_hands = 0
+    bufferfunc.wek_left = np.array([0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.]) #12 positions für 5 finger + wrist
+    bufferfunc.wek_right = np.array([0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.]) #12 positions für 5 finger + wrist #not used
 
+bufferfunc()
         
 # draw finger position
 def draw_finger_position(image, results, joint_list):
@@ -134,6 +139,7 @@ def draw_finger_position(image, results, joint_list):
             ruta = string_path.encode()
             if (buff[1] != a[1]):
                 OSC_CLIENT.send_message(ruta, [float(a[1])])
+                
             
             buff = a
 
@@ -157,17 +163,17 @@ def draw_finger_position(image, results, joint_list):
             index_pos_0 = index_pos
             pinky_pos_0 = pinky_pos
             
-            cv2.putText(image, "position thumb: " + str(thumb_pos), (50, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
-            cv2.putText(image, "position index: " + str(index_pos), (50, 170), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
-            cv2.putText(image, "position pinkie: "+ str(pinky_pos), (50, 190), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+            cv2.putText(image,  str(thumb_pos), (int(0.126*cam_width), int(0.14*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+            cv2.putText(image, str(index_pos), (int(0.126*cam_width), int(0.16*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+            cv2.putText(image,  str(pinky_pos), (int(0.126*cam_width), int(0.18*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
 
             dist_thumb_index = np.linalg.norm(np.array((thumb_pos_0[0], thumb_pos_0[1]))-np.array((index_pos_0[0], index_pos_0[1])))
             dist_index_pinkie = np.linalg.norm(np.array((index_pos_0[0], index_pos_0[1]))-np.array((pinky_pos_0[0], pinky_pos_0[1])))
             dist_pinkie_thumb = np.linalg.norm(np.array((pinky_pos_0[0], pinky_pos_0[1]))-np.array((thumb_pos_0[0], thumb_pos_0[1])))
 
-            cv2.putText(image, "dist thumb - index: " + str(round(dist_thumb_index, 2)), (50, 210), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
-            cv2.putText(image, "dist index - pinkie: " + str(round(dist_index_pinkie, 2)), (50, 230), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
-            cv2.putText(image, "dist pinkie - thumb: "+ str(round(dist_pinkie_thumb, 2)), (50, 250), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+            cv2.putText(image,   str(round(dist_thumb_index, 2)), (int(0.126*cam_width), int(0.20*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+            cv2.putText(image,  str(round(dist_index_pinkie, 2)), (int(0.126*cam_width), int(0.22*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+            cv2.putText(image,  str(round(dist_pinkie_thumb, 2)), (int(0.126*cam_width), int(0.24*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
 
             dist_array = np.array([dist_thumb_index,dist_index_pinkie,dist_pinkie_thumb])     
 
@@ -188,6 +194,16 @@ def draw_finger_position(image, results, joint_list):
 
             bufferfunc.count_hands = bufferfunc.count_hands +1
 
+
+
+            wrist = np.array([hand.landmark[0].x, hand.landmark[0].y]) 
+            thumb = np.array([hand.landmark[4].x, hand.landmark[4].y]) 
+            index = np.array([hand.landmark[8].x, hand.landmark[8].y]) 
+            middle = np.array([hand.landmark[12].x, hand.landmark[12].y]) 
+            ring = np.array([hand.landmark[16].x, hand.landmark[16].y]) 
+            pinky = np.array([hand.landmark[20].x, hand.landmark[20].y]) 
+            bufferfunc.wek_left  = np.concatenate((wrist, thumb, index, middle, ring, pinky))
+
         # RIGHT HAND, PUT TRIANGLE AND SEND VIA OSC
         if hand_label == "Right":
             
@@ -195,17 +211,17 @@ def draw_finger_position(image, results, joint_list):
             index_pos_1 = index_pos
             pinky_pos_1 = pinky_pos
 
-            cv2.putText(image,  str(thumb_pos), (290, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
-            cv2.putText(image, str(index_pos), (290, 170), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
-            cv2.putText(image,  str(pinky_pos), (290, 190), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+            cv2.putText(image,  str(thumb_pos), (int(0.186*cam_width), int(0.14*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+            cv2.putText(image, str(index_pos), (int(0.186*cam_width), int(0.16*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+            cv2.putText(image,  str(pinky_pos), (int(0.186*cam_width), int(0.18*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
 
             dist_thumb_index1 = np.linalg.norm(np.array((thumb_pos_1[0], thumb_pos_1[1]))-np.array((index_pos_1[0], index_pos_1[1])))
             dist_index_pinkie1 = np.linalg.norm(np.array((index_pos_1[0], index_pos_1[1]))-np.array((pinky_pos_1[0], pinky_pos_1[1])))
             dist_pinkie_thumb1 = np.linalg.norm(np.array((pinky_pos_1[0], pinky_pos_1[1]))-np.array((thumb_pos_1[0], thumb_pos_1[1])))
 
-            cv2.putText(image, str(round(dist_thumb_index1, 2)), (290, 210), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
-            cv2.putText(image, str(round(dist_index_pinkie1, 2)), (290, 230), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
-            cv2.putText(image, str(round(dist_pinkie_thumb1, 2)), (290, 250), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+            cv2.putText(image, str(round(dist_thumb_index1, 2)), (int(0.186*cam_width), int(0.20*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+            cv2.putText(image, str(round(dist_index_pinkie1, 2)), (int(0.186*cam_width), int(0.22*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+            cv2.putText(image, str(round(dist_pinkie_thumb1, 2)), (int(0.186*cam_width), int(0.24*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
 
             dist_array2 = np.array([dist_thumb_index1,dist_index_pinkie1,dist_pinkie_thumb1])     
 
@@ -226,6 +242,15 @@ def draw_finger_position(image, results, joint_list):
 
             bufferfunc.count_hands = bufferfunc.count_hands +1
 
+
+            #wrist = np.array([hand.landmark[0].x, hand.landmark[0].y]) 
+            #thumb = np.array([hand.landmark[4].x, hand.landmark[4].y]) 
+            #index = np.array([hand.landmark[8].x, hand.landmark[8].y]) 
+            #middle = np.array([hand.landmark[12].x, hand.landmark[12].y]) 
+            #ring = np.array([hand.landmark[16].x, hand.landmark[16].y]) 
+            #pinky = np.array([hand.landmark[20].x, hand.landmark[20].y]) 
+            #bufferfunc.wek_right  = np.concatenate((wrist, thumb, index, middle, ring, pinky))
+
         cv2.line(image, (thumb_pos), (index_pos), color_set, thickness = 2)
         cv2.line(image, (index_pos), (pinky_pos), color_set, thickness = 2)
         cv2.line(image, (pinky_pos), (thumb_pos), color_set, thickness = 2)
@@ -234,7 +259,7 @@ def draw_finger_position(image, results, joint_list):
 
     # Check for both using isinstance, to work around the "thumb_pos_0[i] -> NoneType not subscriptable" error that appears, when BOTH_HANDS happens before one of the hands 
     if (isinstance(thumb_pos_0, (str, list, tuple)))&(isinstance(thumb_pos_1, (str, list, tuple))):
-        print("both", )
+        #print("both", )
        
 
         cv2.line(image, thumb_pos_0, thumb_pos_1, color_set, thickness = 2)
@@ -257,11 +282,11 @@ def draw_finger_position(image, results, joint_list):
         middle_pinky = tuple(np.multiply(((pinky_0_x_y + pinky_1_x_y)/2), [1, 1]).astype(int))
         
         cv2.putText(image, str(dist_thumb), (middle_thumb), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
-        cv2.putText(image, "distance thumb: " + str(dist_thumb), (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+        cv2.putText(image,  str(dist_thumb), (int(0.126*cam_width), int(0.04*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
         cv2.putText(image, str( dist_index), (middle_index), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
-        cv2.putText(image, "distance index: " + str(dist_index), (50, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+        cv2.putText(image,  str(dist_index), (int(0.126*cam_width), int(0.06*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
         cv2.putText(image, str( dist_pinky), (middle_pinky), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
-        cv2.putText(image, "distance pinkie: " + str(dist_pinky), (50, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+        cv2.putText(image,  str(dist_pinky), (int(0.126*cam_width), int(0.08*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
 
         dist_array_hands = np.array([dist_thumb,dist_index,dist_pinky])     
 
@@ -280,6 +305,15 @@ def draw_finger_position(image, results, joint_list):
 
         bufferfunc.dist_finger = dist_array
 
+
+    # WEKINATOR INPUTS ____________________________________________
+        
+    ruta_wek = "/wek/inputs"
+    #message as array
+    message_wek = bufferfunc.wek_left # np.append(bufferfunc.wek_left, bufferfunc.wek_right)
+    #print(message_wek)
+    OSC_CLIENT_WEK.send_message(ruta_wek.encode(), message_wek)
+
     
 
     
@@ -293,6 +327,7 @@ joint_list = [[4,3,2], [8,7,6], [20,19,18]]
 # Video Capture 
 ## this is where you choose your webcam. try 0, 1, etc. 
 cap = cv2.VideoCapture(1)
+
 # camera parameters
 cam_width  = cap.get(3)  # float `width`
 cam_height = cap.get(4)  # float `height`
@@ -353,9 +388,9 @@ with mp_hands.Hands(max_num_hands = 2, min_detection_confidence=0.8, min_trackin
                     text, coord = get_label(num, hand, results)
                     cv2.putText(image, text, coord, cv2.FONT_HERSHEY_SIMPLEX, 1, color_set, 2, cv2.LINE_AA)
                     if text[0] == "L":
-                        cv2.putText(image, text, (50, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+                        cv2.putText(image, text[-4:],(int(0.126*cam_width), int(0.10*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
                     if text[0] == "R":
-                        cv2.putText(image, text, (50, 130), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+                        cv2.putText(image, text[-4:], (int(0.126*cam_width), int(0.12*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
                     
                     
             
@@ -368,17 +403,26 @@ with mp_hands.Hands(max_num_hands = 2, min_detection_confidence=0.8, min_trackin
 
 
         # default text
-        cv2.putText(image, "Left " , (50, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
-        cv2.putText(image, "Right " , (50, 130), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
-        cv2.putText(image, "distance thumb: ", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
-        cv2.putText(image, "distance index: ", (50, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
-        cv2.putText(image, "distance pinkie: ", (50, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
-        cv2.putText(image, "position thumb: ", (50, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
-        cv2.putText(image, "position index: ", (50, 170), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
-        cv2.putText(image, "position pinkie: ", (50, 190), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )  
-        cv2.putText(image, "dist thumb - index: ", (50, 210), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
-        cv2.putText(image, "dist index - pinkie: " , (50, 230), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
-        cv2.putText(image, "dist pinkie - thumb: ", (50, 250), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+        cv2.putText(image, "distance thumb: ", (int(0.026*cam_width), int(0.04*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+        cv2.putText(image, "distance index: ", (int(0.026*cam_width), int(0.06*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+        cv2.putText(image, "distance pinkie: ", (int(0.026*cam_width), int(0.08*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+        cv2.putText(image, "Left " , (int(0.026*cam_width), int(0.10*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+        cv2.putText(image, "Right " , (int(0.026*cam_width), int(0.12*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+        cv2.putText(image, "position thumb: ", (int(0.026*cam_width), int(0.14*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+        cv2.putText(image, "position index: ", (int(0.026*cam_width), int(0.16*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+        cv2.putText(image, "position pinkie: ", (int(0.026*cam_width), int(0.18*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )  
+        cv2.putText(image, "dist thumb - index: ", (int(0.026*cam_width), int(0.20*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+        cv2.putText(image, "dist index - pinkie: " , (int(0.026*cam_width), int(0.22*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+        cv2.putText(image, "dist pinkie - thumb: ", (int(0.026*cam_width), int(0.24*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+
+        cv2.putText(image, "change speed ", (int(0.57*cam_width), int(0.04*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+        cv2.putText(image, "change sample ", (int(0.37*cam_width), int(0.04*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+        cv2.putText(image, "hold left ASL ILY for 2 sec ", (int(0.54*cam_width), int(0.07*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+        cv2.putText(image, "hold left ASL ILY for 2 sec ", (int(0.34*cam_width), int(0.07*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+        #cv2.putText(image, "CLOUD HANDS by TIM-TAREK GRUND ", (int(0.8*cam_width), int(0.92*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
+        cv2.rectangle(image, (int(0.3*cam_width), int(0.0*cam_height)), (int(0.5*cam_width),int(0.1*cam_height)), color_set)
+        cv2.rectangle(image, (int(0.7*cam_width), int(0.0*cam_height)), (int(0.5*cam_width),int(0.1*cam_height)), color_set)
+
 
         # Save our image    
         #cv2.imwrite(os.path.join('Output Images', '{}.jpg'.format(uuid.uuid1())), image)
