@@ -328,6 +328,7 @@ joint_list = [[4,3,2], [8,7,6], [20,19,18]]
 ## this is where you choose your webcam. try 0, 1, etc. 
 cap = cv2.VideoCapture(1)
 
+
 # camera parameters
 cam_width  = cap.get(3)  # float `width`
 cam_height = cap.get(4)  # float `height`
@@ -420,8 +421,8 @@ with mp_hands.Hands(max_num_hands = 2, min_detection_confidence=0.8, min_trackin
         cv2.putText(image, "hold left ASL ILY for 2 sec ", (int(0.54*cam_width), int(0.07*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
         cv2.putText(image, "hold left ASL ILY for 2 sec ", (int(0.34*cam_width), int(0.07*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
         #cv2.putText(image, "CLOUD HANDS by TIM-TAREK GRUND ", (int(0.8*cam_width), int(0.92*cam_height)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_set, 2, cv2.LINE_AA )
-        cv2.rectangle(image, (int(0.3*cam_width), int(0.0*cam_height)), (int(0.5*cam_width),int(0.1*cam_height)), color_set)
-        cv2.rectangle(image, (int(0.7*cam_width), int(0.0*cam_height)), (int(0.5*cam_width),int(0.1*cam_height)), color_set)
+        #cv2.rectangle(image, (int(0.3*cam_width), int(0.0*cam_height)), (int(0.5*cam_width),int(0.1*cam_height)), color_set)
+        #cv2.rectangle(image, (int(0.7*cam_width), int(0.0*cam_height)), (int(0.5*cam_width),int(0.1*cam_height)), color_set)
 
 
         # Save our image    
